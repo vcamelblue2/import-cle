@@ -6265,6 +6265,62 @@ const appDemoFromHtmlTemplate = async ()=>{
 }
 
 
+const appDemoCSSInJSWithCSZ = async ()=>{
+  // FINAL CSS PROBLEM SOLUTION
+
+  // use this lib. simply create at runtime css class from css strings, and reuse it in cache!
+  // https://github.com/lukejacksonn/csz
+  // https://rajasegar.github.io/csz-slides
+
+  const css = (await import('https://unpkg.com/csz')).default;
+  
+  const globalStyle = css`
+  :global(body){
+    padding: 10px; margin: 0px; width: 100% 
+  }
+  :global(*){
+    box-sizing: border-box !important;
+  }
+  
+  `// global selector does not require to be inserted in cle etc..
+
+  const highlightOnHover = css`&:hover{ transform: scale(1.05)}`
+
+  // SUCCESS
+  RenderApp(document.body, cle.root({},
+
+    cle.h3({}, "Hello World from CSZ!"),
+    cle.wrapper( { class: css`display: flex; justify-content: space-between; align-items: center;` +" "+ highlightOnHover},
+      cle.button({}, "a standard btn"),
+      cle.button({class: "waves-effect waves-light btn"}, "a standard btn (using materialize classes)"),
+      cle.button({ a: {type:"button", class:"btn btn-primary"}}, "a standard btn (using bootstrap classes)"),
+    ),
+
+    cle.hr(),
+    
+    cle.materializecss({ class: css`https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css`, onInit: async ()=>{setTimeout(async() => {await LE_LoadScript('https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js'); window.M?.init()}, 2000); }}, cle.html({}, cle.body({}, 
+      cle.h3({}, "Hello World from CSZ! (using Materialize CSS)"),
+      cle.wrapper( { class: css`display: flex; justify-content: space-between; align-items: center;` +" "+ highlightOnHover},
+        cle.a({ class: "waves-effect waves-light btn"}, "a materialize btn"),
+        cle.a({ class: "waves-effect waves-light btn"}, "a materialize btn"),
+        cle.a({ class: "waves-effect waves-light btn"}, "a materialize btn"),
+      )
+    ))),
+    
+    cle.hr(),
+    // to use bootstrap 5 isolated in some component you need to attach as shadowDom
+    cle.bootstrap({ class: css`https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css`  }, cle.html({}, cle.body({}, 
+      cle.h3({}, "Hello World from CSZ! (using Bootstrap)"),
+      cle.wrapper( { class: css`display: flex; justify-content: space-between; align-items: center;` +" "+ highlightOnHover},
+        cle.button({ a: {type:"button", class:"btn btn-primary"}}, "a bootstrap btn"),
+        cle.button({ a: {type:"button", class:"btn btn-primary"}}, "a bootstrap btn"),
+        cle.button({ a: {type:"button", class:"btn btn-primary"}}, "a bootstrap btn"),
+      )
+    ))),
+  ))
+
+}
+
 // app0()
 // test2way()
 // appTodolist()
@@ -6309,3 +6365,4 @@ const appDemoFromHtmlTemplate = async ()=>{
 // appDemoCheckedDeps()
 // appDemoOptimizedLeFor()
 // appDemoFromHtmlTemplate()
+// appDemoCSSInJSWithCSZ()
