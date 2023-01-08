@@ -5,6 +5,8 @@
 const ReactInCle = {
   DEBUG: { ENABLED: false },
 
+  nestedReactTag: "nested-react",
+
   deps: {
     react: {
       React: window.React,
@@ -59,7 +61,7 @@ const UseReact = (Def=()=>{}, props={}, changeDetectionVars=[], extraDefinitions
 			$.update()
 		}
 	})
-	return { 'nested-react': definition }
+	return { [ReactInCle.nestedReactTag]: definition }
 }
 
 // F smartfunc declarations in react elements 
@@ -129,4 +131,13 @@ const useCleProps = ($, ...propsName)=>{
 	return [_, lrid, rerenderize]
 }
 
-export { ReactInCle, UseReact, UseReactMixin, fReact, useCleProp, useCleProps }
+const onCleSignal = ($, signal, handler, upsearch=false)=>{
+	const [tmpUID, tmpSetUID] = ReactInCle.deps.react.useState({})
+	$.this.subscribe(signal, tmpUID, handler, upsearch )
+
+	ReactInCle.deps.react.useEffect(()=>{
+		return $.this.subscribe(signal, tmpUID, handler, upsearch )
+	}, []) // oninit, return ondestroy
+}
+
+export { ReactInCle, UseReact, UseReactMixin, fReact, useCleProp, useCleProps, onCleSignal }
