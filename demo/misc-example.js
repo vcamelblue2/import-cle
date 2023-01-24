@@ -1,424 +1,5 @@
-import { Alias, Bind, Case, cle, Extended, ExtendSCSS, ExternalProp, f, fArgs, LE_BackendApiMock, LE_LoadCss, LE_LoadScript, pass, Placeholder, RenderApp, smart, SmartAlias, str, Switch, toInlineStyle, Use, useExternal, html } from "../lib/caged-le.js"
+import { Alias, Bind, BindToProp, Case, cle, Extended, ExtendSCSS, ExternalProp, f, fArgs,  asFunc, LE_BackendApiMock, LE_LoadCss, LE_LoadScript, pass, Placeholder, RenderApp, smart, SmartAlias, str, Switch, toInlineStyle, Use, useExternal, html } from "../lib/caged-le.js"
 import { NavSidebarLayout } from "../layouts/layouts.js"
-
-/*
-
-const component = {
-
-  component_name: { meta: { if: $ => some.condition },
-
-    "private:"? id: "compoent_id",
-    
-    "ctx_id: "ctx_compoent_id",
-
-    "name": "refName",
-
-    constructor: ($, {param1, param2, param3 ...}) => { // costruttore, quando viene generato il componente
-      $.this.blabla = blilbi
-    },
-    
-    beforeInit: $ => { // prima di tutto
-
-    }
-
-    onInit: $ => { // prima di inizializzare html 
-      console.log()
-    },
-
-    afterChildsInit: $ => { // dopo la onInit dei childs
-
-    }
-
-    afterInit: $ => { // dopo html init (auto lazy)
-      console.log()
-    },
-
-    onUpdate: $ => { // cancellato per essere ricreato
-
-    },
-
-    onDestroy: $ => {
-
-    },
-
-    deps: { // check a runtime dell'esistenza delle deps
-      scope: ["myTextProp", "myFunc"],
-      parent: ["myParentDepsProp"],
-      ...
-    },
-
-    signals: {
-      counterReset: "stream => (void)" // definiamo il tipo di segnale (es: stream [per indicare chi c'è c'è], observable [per indicare che chi non c'è riceverà tutti i next e poi stream]) "=>" una descrizione dei params (es il tipo dei parametry, la signature etc etc..è solo testo che documenta!)
-    },
-
-    dbus_signals: { // qui definiamo i segnali globali..un modo per creare uno stream su un canale comune con un compagno che non riesco a raggiungere facilmente "by name", e che entrambi conosciamo
-      iEmitThisGlobalSignal_UniqueName: "stream => (int: counter status)"
-    }
-
-    "private:"? data | props: {
-      name: "counter 1",
-      counter: 0,
-      my_alias: Alias(getter $=>..., setter $,v=>..., caching(new, old)=>new!==old...),
-      my_alias2: SmartAlias('@counter')
-    },
-
-    on: { // on props | alias changes
-      this: {
-        counterChanged: ($, newCounter, oldCounter) => console.log($.this.counter),
-      }, 
-      parent: ...
-      scope: ... any prop in self or any parent anchestor
-      le: ..byname.. : {props | alias changed},
-      ctx: ...qui mettiamo solo i nomi dei sub_componenti + this di questo componente! 
-      // ci vorrebbe anche un $.subel, (un array, non obj con in le) in cui è possibile filtrare by type: es $.subel.get("div")[0]..oppure il concetto di tref di le..o magari questa in realtà con ctx si risolve.. vedi sotto che ho descritto bene
-      
-      TODO: direct_child: ... // in alternativa alle menate di sopra. conscio del fatto che è una "multicast", e in congiunzione con l'inserimento in properties di una ".childs" in grado quindi di poter fare $.this.childs[0].doSomething
-      // todo: reserved keyword for property signal etc naming
-    },
-
-    on_s: { // on signal
-      this: {
-        counterReset: $ => console.log("counter reset!")
-      }, 
-      parent: ...
-      scope: ... any prop in self or any parent anchestor
-      le: .component byname.. : { signal},
-      ctx: ...qui mettiamo solo i nomi dei sub_componenti + this di questo componente! 
-      dbus: ...qui mettiamo i signals globali che ascolto
-
-      // valitare anche "child:0" & "child:*" | child: { "0" | "*" : .. }
-
-      // è anche possibile "autopropagare" i segnali che elaboro, senza ridefinirli (per favorire sub child to parent flow, o evitare inutili remap), come?  con una classe/costante che instanziamo e dunque definire: ctx: {subchildSignal: Autopropagate}
-    },
-
-    TODO: on_a { /////// AL MOMENTO NON PREVISITO!!!
-      this: {
-        "class" | "style.width" : $ => ... 
-      }
-      ... come sopra
-    },
-
-    // todo: valutare anche i "transoformer/reducer" in quanto con il sistema di auto change propagation per fare una op in blocco dovrei avere un mega stato..ma poi ho il problema che ci sono troppi update inutili..i reducer/transformer aiuterebbero!
-
-
-    "private:"? def: {
-      resetCounter: $ => {
-        $.this.counter = 0
-        $.this.counterReset.emit() // also lazy: $.this.counterReset.emitLazy(10)
-      }, 
-
-      utils: { // def namespace example
-        toUppercase: ($, txt) => txt.toUppercase()
-      }
-    },
-
-    alias: { // nice to have, alias, per permettere di vedere all'esterno alcune proprietà interne e ridefinirle con la use senza toccare la logica o via prop extra!
-      ctx: {
-        counter_txt: $ => $.ctx.counter_value.text // qui probabilmente devo andare con la tecnica retry untill..
-      }
-    }
-
-    "private:"? attrs | a : { // html attr  -> // altri nomi possibili: "has" | "viewProps" | "</>" P.S: qui magari veramente che potrebbe starci il fatto che qualsiasi altra cosa che non sia tra quelle descritte da noi diventa un attribute o un $.this.el.XXX
-
-      style: {
-        width: 200,
-        height: $ => 200
-      }, // oppure style: $ => ({ width... }) su questo devo ancora ragionare..
-
-      class: "someclass"
-
-      "@lazy:scrollTop": 100 // con il prefisso '@lazy:' indico che quell'attributo lo voglio inizializzare lazy!
-
-      value: Bind($ => $.this.counter) // per effettuare 2 way data binding!
-    
-      // todo: style e class devono stare separati?? in roba apposita? in teoria si..perchè così potremmo anche andare a utilizzarli per creare l'anchors system definitivo..visto che starebbero in qualcosa di separato è anche più facile la sovrascrittura..
-    },
-    // NB: ricordarsi che è possibile osservare i changes degli attributi tramite un semplicissimo "mutationObserver"..questo ci permette di fare il 2 way binding in modo super semplice! infatti basta fare questa cosa: https://stackoverflow.com/a/41425087 unita al una classe che usiamo come trap per configurare il 2 way binding! ovviamente dovrà essere possibile configurare anche solo il flusso attr to property, in modo p.es da bindre la select a una nostra property in modo unidirezionale
-
-
-    // hattrs ... "harmfulAttr" todo, capire se ha senso..in pratica qui non settiamo via "setAttribute", ma direttamente via this.el.xxxx = e anche in ricorsione..
-    "private:"? hattrs | ha: {
-      scrollTop: "0px",
-      'style.backgroundColor': "red",
-      'myAttr.nested.prop': $ => "follow some stuff"
-      "@lazy:scrollTop": Bind($ => $.this.counter) // per lazy binding!
-    }
-
-    // novità: ora è anche possibile usare le shortcuts: "ha.style.color": "red"  oppure "a.style": {color: "red"}
-
-    handle: { // html event
-      onclick: ($, e) => $.this.count++
-    },
-
-    when: { // html event (in the form of addEventListener) configurable!
-      focusin: ($, e) => $.this.count++
-      focusout: { options: {capture: true, useCapture: true}, handler: ($, e) => $.this.count++, }
-    },
-
-    css: [ ".class { bla:bli ... }", $=>".r0 { .."+$.this.somedeps +"}" ] | {rule1: ".class { bla:bli ... }", rule2: $=>".r0 { .."+$.this.somedeps +"}"} // todo..magari qualcosa di più complesso..come hoisting (via replacer, o anche per i subel), or namaed definition (tipo le)..oppure per automatizzare l'hoisting =>  css: [ ".class { bla:bli ... }", ".class2 { foo:bar; ...", NoHoisting("sostanzialmente ::ng-dep..")]
-    
-    s_css:{
-      ".myClass": [{
-        display: "inline"
-      }]
-      ".myClassDynRule": [$=>({
-        display: $.scope.condition ? "inline" : "none"
-      })]
-    } // Use/Extended(component, {s_css: {".myClass": [ExtendSCSS, {opacity: 0.8}]}})
-    
-    TODO: states: {
-      // "default": "this", // implicit, always chang
-
-      "bigger": { // 
-
-        attrs: {
-          style: {
-            width: 400,
-            backgroundColor: "red"
-          }
-        }
-      }
-
-    },
-
-    TODO: state: "default" // optional different starting state
-    TODO: stateChangeStrategy: "merge XXXstatenameXXX" | "replace" | "remove" // magari questa cosa va dentro i singoli state..
-
-    TODO: onState: ($, newState, oldState)=> {
-
-    }
-
-
-    contains | childs | text | view | '>>' | '=>' | '' | _ : [
-
-      { 
-        h1: { ctx_id: "counter_name", text: $ => $.parent.name }
-      },
-      { 
-        span: { ctx_id: "counter_value", text: $ => "count:" + $.parent.counter }
-      },
-      "simple text",
-      $ => "lazy text:" + $.this.state,
-
-      Use( MyComponent, { // component creation / use example (from following code) 
-        // redefinition..
-          handle: {
-            onclick: ...
-          }
-          on_s: { 
-            this: { 
-              mySignal: ($, ...args) => do whatever
-            }
-          } 
-        }, 
-        {
-          init: { childPropToInitInConstructor: $ => $.meta.idx }
-        }, 
-        // todo: qui potrebbe starci una connect del signal con autopropagate, ovvero poter indicare che propago un certo segnale nel mio parent!
-      ),
-
-
-      { Model | Controller | Connector..etc: { // OBJECT, invisible, usefull for app logic and data manipulation, with meta: { hasViewChilds: true } can be materialized into the view as <leobj></lepbj>
-        data: {prop1: 23},
-
-        ["=>"]: [
-
-          { Model: { // sub model/obj
-            data: {prop2: 25},
-            afterInit: $ => console.log($.this.prop2),
-            text: $ => $.parent.prop1, // but also: $.scope.prop1, because $scope use dynamic binding (and shadowing) and compact all the props and signal from me and my parents
-          }
-        },
-        ]
-      }},
-
-    ],
-
-  }
-}
-
-// COMPONENT REDEFINITION SEPARATION
-
-impossible_to_redefine = ["ctx_id"]
-direct_lvl = ["id", "constructor", "beforeInit", "onInit", "afterChildsInit", "afterInit", "onUpdate", "onDestroy"]
-first_lvl = ["signals", "dbus_signals", "data", "private:data", "props", "private:props", "alias", "handle"]
-second_lvl = ["on", "on_s", "on_a"]
-first_or_second_lvl = ["def", "private:def"] // check for function (may exist "first lvl namespace")
-// TODO: actually merge unsupported
-"hattrs", "ha", "private:hattrs", "private:ha", "attrs", "private:attrs", "a", "private:a", css, states, state, stateChangeStrategy, onState, contains | childs | text | view | '>>' | '=>' | '' | _???
-
-
-
-const DeleteTodoButton = { 
-
-  button: {
-  
-    props: { todoIndex: undefined },
-
-    constructor: ($, {todoIndex})=>{ // qua forse capiamo, perchè sarebbe carino poter definire dinamicamente prop..anche se potrebbe diventare illegibile!
-      $.this.todoIndex = todoIndex // sabebbe bello avere anche un mini constructor di default per questi casi, ovvero constructor: autoConstructor; autoConstructor: (arg_as_obj)=>Object.entries..map in data/pros etc..
-    },
-
-    text: $ => "delete me ("+$.this.todoIndex+")",
-
-    signals: {
-      deleteRequest: "stream => (void)",
-    }
-
-    handle: {
-      onclick: $ => $.this.deleteRequest.emit()
-    }
-
-  }
-}
-
-
-const TodoList = { // automatic root div!
-
-  id: "todolist", 
-
-  data: {
-    todolist: []
-  }
-
-  on: {
-    this: {
-      todoListChanged: $ => $.this._logTodoEdits()
-    }
-  },
-
-  on_s: {
-    le | ctx : {
-      input_bar: {
-        newTodoRequest: ($, todo) => $.this.addTodo(todo)
-      }
-    }
-  },
-
-
-  def: {
-    addTodo: ($, todo) => $.this.todolist = [...$.this.todolist, todo],
-    deleteTodo: ($, todo) => ...find and delete..
-  }
-
-  "private:def":{
-    logTodoEdits: $ => console.log("todo edited!!")
-  }
-
-  '=>': [
-
-    { input: { 
-
-        id: "input_bar", 
-
-        signals: { 
-          newTodoRequest: "stream => (string: new inserted todo)"
-        },
-        props | data: { todo: "" }
-        attrs: { 
-          value: $ => $.this.todo, 
-          placeHolder: "Insert some Todo..", 
-          style: { width: "300px", height: "100px"} 
-        }, 
-        handle: { 
-          onInput: ($,e) => $.this.todo = e.target.value, 
-          onEnterPressed: $ => $.this.newTodoRequest.emit($.this.todo) 
-        } //mock
-      }
-    },
-
-    { hr: {} },
-
-
-    { div: { meta: { forEach:"todo",  of: $ => $.parent.todolist,  define:{ index:"idx", first:"isFirst", last:"isLast", length:"len", iterable:"arr",    ...CUSTOM_PROP_NAME: value | ($: "parent" $this (same as meta), $child: real $this of the child)=> ... }, define_alias:{ // my_var_extracted_with_meta_identifier..easy alias! //, todo_label: $ => $.this.todo_label_mapping[$.meta.todo]},  key,comparer: el=>... extractor/converter: $=> // opzionale, per fare es Obj.keys --> extractor:($, blabla)=>Object.keys(blabla) e i comparer per identificare i changes // 
-                     ,comparer: (_new, _old)=>_new !== _old
-                     ,idComparer: (_new, _old)=>_new !== _old // comparer for leFor Elements
-                     ,optimized: true // enable leFor optimization
-                     ,newScope: bool, noThisInScope: bool, noMetaInScope: bool, hasViewChilds: bool, metaPushbackAutomark: bool}], (le ultime sono le "scope options") 
-      
-      "=>": [
-
-        { div: { text: $ => $.meta.idx + ") " $.meta.todo, // oppure "stringa" oppure $=>$.meta.idx ..shortcut for textNode (vecchio {$: fff} in le)
-
-        Use( DeleteTodoButton, { 
-            on_s: { 
-              this: { 
-                deleteRequest: $ => $.ctx.root.deleteTodo() 
-              }
-            } 
-          }, 
-          {
-            init: { todoIndex: $ => $.meta.idx } // nella init il punto di vista del this E' SEMPRE IL MIO PARENT, qui meta è sempre quello DEL MIO PARENT
-          }, 
-          // todo: qui potrebbe starci una connect del signal con autopropagate, ovvero poter indicare che propago un certo segnale nel mio parent!
-        )
-      ]
-
-    }},
-
-
-    { div: { meta: { if: $ => $.ctx.root.todolist.length > 50},
-      text: "ohhh nooo, hai molti todo"
-    }},
-
-    { div: { meta: { if: $ => $.ctx.root.todolist.length === 0},
-      text: "hurrraaa, non hai nulla da fare!"
-    }},
-
-
-    // oppure
-    { div: { meta: { 
-      swich: $ => $.ctx.root.todolist.length, 
-      cases: [
-        [($, len) => len > 50, { div: { text: "ohhh nooo, hai molti todo"} }]
-        [($, len) => len == 0, { div: { text: "hurrraaa, non hai nulla da fare!"} }]
-      ], 
-      default: undefined
-    },
-    }}, // così però devo per forza wrappare in un div etc..
-    
-    // alternativa: lo switche non è ninent'altro che una trasfromazione identificata a beckend (con classe sentinel) e riconvertita in le-if da noi
-    Switch( $ => $.ctx.root.todolist.length, 
-
-      Case( ($, len) => len > 50,  
-      { 
-        div: { text: "ohhh nooo, hai molti todo"} 
-      }),
-
-      Case( ($, len) => len == 0, 
-      { 
-        div: { text: "hurrraaa, non hai nulla da fare!"} 
-      }),
-
-      Default( pass )
-    )
-
-  ],
-
-}
-
-
-// NOTE DONE:
-// $.meta per le var in meta..es nei foreach etc
-// "$.ctx" che rappresenta il contest dov'è definito il componente..escludendo quindi figli as component, parent e altre cagate
-// grazie a questa cosa posso definire un "local_id" o "private:id" che potrei usare per fare hoisting dei nomi! aumentando riusabilità e un minimo di private/public
-// altra cosa interessante sarebbero i modificatorie public e private, esempio "private:data": ... oppure "private:def", per avere anche più "def" etc pubbliche e private
-
-// l'uso di questi oggetti apre a nuove possibilità, come ad esempio i tratti..ovvero poter prendere alcune cose in var e poi usarle in vari punti..
-// ricordarsi di tutte le cose buone che abbiamo in le attuale..come i global signal, e a livello di page. nonchè una zona dove poter definire regole css
-
-
-// se volessimo usare le classi sarebbe così: (anche meglio, perchè così ad ogni new ho già una copia che non alterna nulla..non devo fare copy)
-const myComponet = {
-  htmlType: class myComponentDef {
-    props = {...},
-    ...
-  }
-}
-
-
-*/
-
 
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 // TESTING
@@ -539,7 +120,7 @@ const app0 = ()=>{
 
   const CtxEnabledComponent = {
     div: { 
-      ctx_id: "myCtxRoot",
+      // ctx_id: "root" -> ALWAYS
 
       data: {
         todo: ["todo1", "todo2", "todo3"]
@@ -554,10 +135,10 @@ const app0 = ()=>{
 
           def: {
             removeLastTodo: $ => {
-              if ($.ctx.myCtxRoot.todo.length > 0) {
-                let copy = [...$.ctx.myCtxRoot.todo]
+              if ($.ctx.root.todo.length > 0) {
+                let copy = [...$.ctx.root.todo]
                 copy.pop()
-                $.ctx.myCtxRoot.todo = copy
+                $.ctx.root.todo = copy
               }
             }
           },
@@ -571,19 +152,19 @@ const app0 = ()=>{
         { div: { 
             ctx_id: "listPresenter",
 
-            text: $ => "--" + $.ctx.myCtxRoot.todo.toString(),
+            text: $ => "--" + $.ctx.root.todo.toString(),
 
-            on: { // demo di _root_ e _ctxroot_
-              ctx: {"_ctxroot_": {
-                todoChanged: $=> console.log(" heeey sto puntanto al _ctxroot_ e ai sui aggiornamenti di todo!!")
+            on: { // demo di root e ctxroot
+              ctx: { root: {
+                todoChanged: $=> console.log(" heeey sto puntanto al ctxroot e ai sui aggiornamenti di todo!!")
               }},
-              le: {"_root_": {
-                counterChanged: $=> console.log(" heeey sto puntanto al _root_ e ai sui aggiornamenti di counter!! essendo un componente è possibile che vengano lanciati più segnli")
+              le: { root: {
+                counterChanged: $=> console.log(" heeey sto puntanto al root e ai sui aggiornamenti di counter!! essendo un componente è possibile che vengano lanciati più segnli")
               }}
             },
             
             onInit: $ => {
-              console.log("heeeeeey sono visibile solo nel contestooooo", $.ctx, $.ctx.myCtxRoot, $.le)
+              console.log("heeeeeey sono visibile solo nel contestooooo", $.ctx, $.ctx.root, $.le)
             }
         }}
 
@@ -1197,7 +778,7 @@ const appTodolist = ()=> {
         // here testing component "meta" sapeartion
         { div: {   meta: {forEach:"arr_val", of: $ => $.le.test_lefor.arr}, 
 
-          "=>": Use({ div: {   meta: {forEach:"todo", of: $ => $.le.model.todolist}, 
+          "=>": Use({ div: {   meta: {forEach:"todo", of: $ => $.le.model.todolist, newScope: true}, 
             text: $ => $.meta.arr_val + ") " + $.meta.todo + " (undefined is normal)"
           }})
         }},
@@ -1753,6 +1334,7 @@ const appTestSuperCtxProblem = ()=>{
         smart({span: $=>"elements: "+JSON.stringify($.parent.elements)}),
 
         // testing del problema di accesso al "super-meta", superato con una clone del meta as props(ovviamente qui bastava un parent al posto di scope, ma nei sotto elementi si)
+        // BREAKING CHANGES v0.0.10: now here you should not duplicate meta intoprops to sub use (beacuse meta is NOT blocked by ctx anymore!)
         Use({ div: { meta: {forEach: "tuple", of: $=>$.parent.elements},
 
           props: {
@@ -1775,7 +1357,7 @@ const appTestSuperCtxProblem = ()=>{
                 smart({h6: $=>"-il this vale: "+$.parent.meta_element}),
                 smart({h6: $=>"-il scope vale: "+$.scope.meta_element}),
 
-                smart({h6: $=>"-via meta vale: "+$.meta.meta_tuple}, {ha:{"style.color":"red"}}),
+                smart({h6: $=>"-via meta vale: "+$.meta.tuple}, {ha:{"style.color":"red"}}),
                 smart({h6: $=>"-via scope vale: "+$.scope.meta_tuple}, {ha:{"style.color":"green"}}),
                 
                 smart({ p: $=>"--element:"+$.meta.element}),
@@ -2355,8 +1937,8 @@ const appCalendarOrganizer = async ()=>{
     return res
   }
 
-  const getMonthDays = ()=>{
-    let today_date = new Date() //"04/1/22")
+  const getMonthDays = ()=>{ // MOCK
+    let today_date = new Date("04/1/22")
     let today_date_as_millis = today_date.getTime()
     let today_day = today_date.getDate()
     let first_day_as_millis = today_date_as_millis - ((today_day-1) * (24*60*60*1000))
@@ -2472,6 +2054,21 @@ const appCalendarOrganizer = async ()=>{
         if (plans_on_disk){
           $.this.plans = JSON.parse(plans_on_disk)
         }
+
+        console.log(
+          "--- DATA ---\n",
+          "today: ", $.today,
+          "dates: ", $.dates,
+          "monthLabelMapping: ", $.monthLabelMapping,
+          "slots: ", $.slots,
+          "slot_size_in_hh: ", $.slot_size_in_hh,
+          "colors: ", $.colors,
+          "projects_progressive: ", $.projects_progressive,
+          "projects: ", $.projects,
+          "tasks_progressive: ", $.tasks_progressive,
+          "plans: ", $.plans,
+          "selectedPlan: ", $.selectedPlan,
+        )
       }
 
     }
@@ -2939,7 +2536,7 @@ const appCalendarOrganizer = async ()=>{
 
 
         "=>": [ // gen new meta..
-
+        // BREAKING CHANGES v0.0.10: now here Extended is not required (beacuse meta is NOT blocked by ctx anymore!)
 
           Extended(TodoInput, {attrs: {style: "width: calc(100% - 165px)"}}),
 
@@ -3929,7 +3526,7 @@ const appMetaInScopeAndLowCodeTest = async ()=>{
           f`:::todo.text + " - " + :::todo.done`,
 
           // super meta?
-          Use({ span: { // meta: {newScope: true},
+          Use({ span: { // meta: {newScope: true}, // BREAKING CHANGES v0.0.10: now here now this works! (beacuse meta is NOT blocked by ctx anymore!)
             props: { scoped_todo: $=>$.scope.todo},
             text: $=>" -- testin super meta, ecco il todo: " + $.this.scoped_todo.text
           }}),
@@ -4473,6 +4070,81 @@ const appDemoConstructor = async ()=>{
 
 
       Use(ShowText, { let_desc: "No Constructor..", let_text: $=>$.parent.root_text }),
+
+      { hr: {}}
+    ]
+
+  }})
+
+
+  //////////////////////////////////////////////
+  //////////////////////////////////////////////
+  //////////////////////////////////////////////
+  
+  // v2: better with use external!
+
+  const ShowText2 = { div: {
+    ctx_id: "show",
+
+    // @Input
+    let_desc: "",
+    let_text: "",
+    let_setText: undefined,
+    let_textChangedSignal: undefined,
+
+    def_onTextChangedSignal: ($, ...args)=>{
+      console.log("changed", $.comp_ctx_id, args)
+    },
+
+    constructor: ($, {text})=>{ // nota negativa: devo sempre passare una prop o testare cosa mi hanno passato
+      if (text){
+        console.log(text) // {getter, setter, signal}
+        $.this.text = text.getter
+        $.this.setText = text.setter
+        $.this.textChangedSignal = text.signal // { emit, emitLazy, subscribe, unsubscribe}
+        $.this.textChangedSignal.subscribe($, (...args)=>$.this.onTextChangedSignal($, ...args))
+      }
+    },
+    
+    h_onclick: $=>{
+      console.log("clicked")
+      $.this.setText("aa changeed")
+      $.this.desc="decs changeed. "
+    },
+
+    '': [  $=>$.this.desc, ": ", $=>$.this.text  ]
+  }}
+
+
+  const Input2 = { input: {
+    ha_value: Bind(f`@text`)
+  }}
+
+  RenderApp(document.body, { div: {
+    id: "app",
+    let_text: "hello",
+
+    // also ref works!
+    childsRef: {
+      show_1: "single",
+      show_2: "single"
+    },
+
+    on: { ref: {
+      show_1: { descChanged: $=>{
+        console.log("show 1 desc changed!")
+      }},
+      show_2: { descChanged: $=>{
+        console.log("show 2 desc changed!")
+      }},
+    }},
+
+    '': [
+      Input2,
+
+      // here we pass prop to a component that is in a new scope! encapsulated!
+      Use(ShowText2, {ctx_id: "show_1", name: "show_1", let_desc: "Binded Value: ", meta: {newScope: true} }, {init: {text: BindToProp("text") }}), // point of view dela parent! text si trova in scope..
+      Use(ShowText2, {ctx_id: "show_2", name: "show_2", let_desc: "Binded Value: ", meta: {newScope: true} }, {init: {text: BindToProp("$.le.app.text") }}), // full prop name, always point of view is parent.
     ]
 
   }})
@@ -6321,6 +5993,425 @@ const appDemoCSSInJSWithCSZ = async ()=>{
 
 }
 
+const appDemoEditRefValAndStupidShortcuts = async ()=>{
+
+  // $.this.editRefVal.xxx(=>): utility to edit an object/reference prop without makr as changed explicitly
+
+  // utils banale per ripetere un tag html cambiando solo il contenuto testuale.. es per fare 3 div uno dopo l'altro
+  const repeat = new Proxy({}, {
+    get: (_target, prop, receiver)=>{ 
+      return (args_dict, ...childs)=>childs.map(c=>({[prop]:{
+        ...args_dict, 
+        ...(c.length ? {'':c} : {}) } 
+      })) 
+    },
+    set: function(){}
+  })
+  
+
+  // utils per scrivere con una sintassi leggera i componenti! sintassi basata su tab yaml like..vedi in seguito..
+  class YAMLIZED_TAG{
+    constructor(tag){ this.tag = tag}
+    buildComponent(def, ...childs){
+      return {[this.tag]: {
+        ...(def === undefined ? {} : def), 
+        ...(childs.length ? {'':childs} : {}) 
+      }}
+    }
+  }
+  // declare tag. proxy a func to have vscode highlight!
+  const a = new Proxy(()=>{}, {
+    get: (_, tag)=>{ 
+      return new YAMLIZED_TAG(tag)
+    },
+    set: function() {}
+  })
+  // use this syntax
+  const yml = (...childs)=>{
+    let latestDef = undefined
+    let nextMastBeDefOrChilds = false
+
+    let finalComponents = []
+
+    const compactLatest = (reset=false)=>{
+      if (latestDef !== undefined){
+        finalComponents.push(latestDef.tag.buildComponent(latestDef.def, ...latestDef.childs))
+      }
+      if (reset){
+        latestDef = undefined
+      }
+    }
+
+    for (let x of childs){
+      if (x instanceof YAMLIZED_TAG){
+        if (latestDef !== undefined){
+          compactLatest(false)
+        }
+        latestDef = { tag: x, def: undefined, childs: [] }
+        nextMastBeDefOrChilds = true
+      }
+      else if (nextMastBeDefOrChilds && latestDef !== undefined){
+        if (x === pass){
+          if (latestDef !== undefined){
+            compactLatest(true)
+          }
+        }
+        else if (x === none) {
+          // NO OP
+        }
+        else if (typeof x === "function" || typeof x === "string" || Array.isArray(x) || x instanceof StandardCleComponent){
+          latestDef.childs = [...latestDef.childs, ...(Array.isArray(x) ? (x.map(c=>c instanceof StandardCleComponent ? c.component : c)) : [x])]
+        }
+        else {
+          latestDef.def = x
+        }
+      }
+      else {
+        throw Error("PARSER ERROR!!!")
+      }
+    }
+    
+    compactLatest(true)
+
+    return finalComponents
+  }
+  class StandardCleComponent{ constructor(component){ this.component = component }}
+  const std = (...components)=>components.map(c=>new StandardCleComponent(c))
+  const _ = yml
+
+  // VALID: Ω æ œ œ ø π å ß ƒ ª º µ
+  const ƒ = _
+  const µ = a 
+  const ø = a
+  
+  
+
+  RenderApp(document.body, cle.root({
+    let_calendarEvent: {
+      id: 0, dueTo: "2022-01-01", title: "Go to grocery store"
+    },
+
+    def_editTitle: $=>{
+      $.this.editRefVal.calendarEvent(cv=>cv.title = cv.title !== "Go to the mall!" ?  "Go to the mall!" : "Go to grocery store")
+    }
+  },
+
+    cle.h3("Demo EditRefVal"),
+
+    cle.div({}, "ID: ", f`@calendarEvent.id`),
+    cle.div({}, "Due To: ", f`@calendarEvent.dueTo`),
+    cle.div({}, "Title: ", f`@calendarEvent.title`),
+
+    cle.button({
+      h_onclick: $=>$.editTitle()
+    }, "Change Title"),
+  
+  
+  
+  
+  
+  
+
+    // OTHER STUPID SHORTCUTS
+  
+    cle.hr(),
+    cle.hr(),
+    cle.hr(),
+
+    cle.h3("OTHER TESTS"),
+
+
+    ...repeat.div({}, 
+      ["ID: ", f`@calendarEvent.id`],
+      ["Due To: ", f`@calendarEvent.dueTo`],
+      ["Title: ", f`@calendarEvent.title`],
+    ),
+
+    cle.hr(),
+
+
+
+    ..._(
+      a.div,
+        "ID: ", f`@calendarEvent.id`,
+      
+      a.div, { 
+        style: "color: red" 
+      },
+        "Due To: ", f`@calendarEvent.dueTo`, 
+
+      a.div,
+        "Title: ", f`@calendarEvent.title`,
+
+      /* HTML TEMPLATE VERSION COMPAISON
+      <div>
+        ID: {{@calendarEvent.id}}
+      </div>
+      
+      <div style="color: red">
+        Due To: {{@calendarEvent.dueTo}}
+      </div>
+
+      <div>
+        Title: {{@calendarEvent.title}}
+      </div>
+      */
+
+      
+      a.hr, //////////
+      
+      a.div, {
+        let_prop1: 123
+      },
+        "Lets try nesting!",
+
+        _(a.div, { style: "color: green" },
+            "- 1) Nested! Val: ", $=>$.prop1,
+            
+            _( a.div, { style: "color: red" },
+              "-- 1.1) Sub Nested! Val: ", f`@prop1`
+             )
+         ),
+
+        _(a.div, { style: "color: green" },
+          "- 2) Nested! Val: ",
+          
+          _( a.div, { style: "color: red" },
+            "-- 2.1) Sub Nested! Val: ", f`@prop1`
+           )
+        ),
+
+        std(
+          cle.br(),
+          cle.div("A Standard div"),
+          f`@prop1`
+        ),
+
+
+        // MAC SHORTCUT TEST //////////
+
+        ø.hr, 
+        
+        ø.div, {
+          let_prop1: 123
+        },
+          "Lets try nesting!",
+
+          ƒ(ø.div, { style: "color: green" },
+              "- 1) Nested! Val: ", $=>$.prop1,
+              
+              ƒ( ø.div, { style: "color: red" },
+                "-- 1.1) Sub Nested! Val: ", f`@prop1`
+              )
+          ),
+
+          ƒ(ø.div, { style: "color: green" },
+            "- 2) Nested! Val: ",
+            
+            _( ø.div, { style: "color: red" },
+              "-- 2.1) Sub Nested! Val: ", f`@prop1`
+            )
+          ),
+
+          std(
+            cle.br(),
+            cle.div("A Standard div"),
+            f`@prop1`
+          )
+    ),
+    
+  ))
+
+}
+
+
+const appDemoNoMoreLetAndAsFunc = async ()=>{
+
+  RenderApp(document.body, { div: {
+    // PROP no more reuire let etc. OBIUSLY CANNOT BE A RESERVED KEYWORD
+    myText: "Hello World From No More Let",
+
+    // FUNC AS PROPERTY easy declaration! no detection available, so is not suitable to be used where it's required (rendered text, binding etc..)
+    log: asFunc(($, ...what)=>{
+      console.log(...what)
+    }),
+
+
+    '': [
+      cle.h2($=>$.myText),
+      
+      cle.button({ handle_onclick: $ => $.log("the text is: ", $.myText) }, "Log To Console")
+    ]
+
+  }})
+}
+
+
+
+
+const appDemoComponentFactory = async ()=>{
+
+  const MyComponentByFactory = ({bindedCounter, onCounterChanged, readOnlyVal, getText, setText, subElement})=>{
+
+    return cle.myComponent({
+
+      counter: bindedCounter, // must be a Bind
+      num: readOnlyVal, // not binded..cannot be set in this component, or will be overwrite
+      txt: Alias(getText, setText), // react style..
+
+      onInit: $=>console.log("init", $.num),
+      
+      on_counterChanged: onCounterChanged,
+      
+    },
+
+      cle.h2("This is a component by Factory"),
+
+      cle.button({
+        handle_onclick: $ => $.counter += 1,
+      }, "Inc Counter: ", $=>$.counter),
+
+      cle.div({}, "The num is: ", $=>$.num),
+
+      cle.input({ ha_value: Bind($=>$.txt)}),
+
+      cle.div("subel: "), 
+      subElement || "",
+    )
+  }
+
+  RenderApp(document.body, cle.root({
+    aCounter: 10,
+    aNum: 123,
+    aTxt: "hi",
+
+    aCounterClone: undefined,
+    setCounterClone: asFunc(($, v)=>{
+      console.log("otuput: counter changed!")
+      $.aCounterClone = v
+    }),
+
+    on: { this: {
+      aCounterChanged: $=>{ console.log("counter changed!", $.aCounter)},
+      aNumChanged: $=>{ console.log("num changed!", $.aNum)},
+      aTxtChanged: $=>{ console.log("counter changed!", $.aTxt)},
+    }},
+
+  },
+    cle.h2("Hello from component factory"),
+
+    MyComponentByFactory({
+      bindedCounter: Bind('@aCounter'), 
+      readOnlyVal: $=>$.aNum, 
+      getText: $=>$.aTxt, 
+      setText: ($, v)=>{$.aTxt=v}, 
+
+      onCounterChanged: ($, v)=>$.setCounterClone(v), // catch output!
+
+      subElement: { div: ["a subelement, counter clone: ", $=>($.aCounterClone || 'not-set-yet')] }
+    })
+  ))
+
+}
+
+const appDemoComponentPrivateVar = async ()=>{
+
+  const Component = cle.div(
+  { 
+    // ctx id is by defult "root" for component in Use
+    
+    initialText: "",
+    publicTextReadOnly: Alias($ => $.ctx.inputBar.text), // public! after a set by evaluable
+
+    def: {
+      getText: $ => $.ctx.inputBar.text,
+
+      setText: ($, txt) => { $.ctx.inputBar.text = txt },
+
+      resetText: $ => { $.ctx.inputBar.text = "" },
+
+      setPrivateText: ($, val) => {
+        $.ctx.private.privateVar = val
+      }
+    }
+  },
+
+    cle.Model({ ctx_id: "private", 
+      let: {
+        privateVar: "hello i'm private",
+      }
+    }),
+  
+    // private! unreachable text props
+    cle.input({  ctx_id: "inputBar",
+        let_text: $=>$.initialText,  a_value: Bind(f`@text`) // copied once, then overwritten!
+    }),
+
+    cle.div({ ctx_id: "output", }, $=>$.ctx.inputBar.text),
+
+    cle.div({}, $=>$.ctx.private.privateVar)
+  )
+
+
+  RenderApp(document.body, cle.root(
+  {
+    childsRef: {
+      component1: "single",
+      component2: "single",
+    },
+
+    def: {
+      getComp1PublicText: $=>{
+        return "-- ref: " + $.ref.component1.publicTextReadOnly + "-- ctx: " + $.ctx.component1.publicTextReadOnly
+      },
+      getComp2PublicText: $=>{
+        return "-- ref: " + $.ref.component2.publicTextReadOnly + "-- ctx: " + $.ctx.component2.publicTextReadOnly
+      },
+    }
+  },
+
+    { h1: "Hello World!" },
+
+    "--ref: ", $=>$.ref.component1.publicTextReadOnly, // test deps following before element has been created!
+    cle.br(),
+    "--ctx: ", $=>$.ctx.component1.publicTextReadOnly,
+    cle.br(),
+    "--via func: ", $ => $.getComp1PublicText(),
+    
+    Use(Component, { 
+      name: "component1", 
+      ctx_ref_id: "component1", // refer in the parent context as
+      initialText: "text 1"
+    }),
+
+    cle.button({
+      handle_onclick: $ => { $.ctx.component1.setPrivateText("Changed with a public (controlled) method")}
+    }, "Edit Private Comp1 Var"),
+    
+    
+    
+    cle.hr(),
+
+    "--ref: ", $=>$.ref.component2.publicTextReadOnly,
+    cle.br(),
+    "--ctx: ", $=>$.ctx.component2.publicTextReadOnly,
+    cle.br(),
+    "--via func: ", $ => $.getComp2PublicText(),
+    
+    Use(Component, { 
+      name: "component2", 
+      ctx_ref_id: "component2", // refer in the parent context as
+      initialText: "text 2"
+    }),
+
+    cle.button({
+      handle_onclick: $ => { $.ctx.component2.setPrivateText("Changed with a public (controlled) method")}
+    }, "Edit Private Comp1 Var"),
+
+
+  ))
+}
+
 // app0()
 // test2way()
 // appTodolist()
@@ -6366,3 +6457,7 @@ const appDemoCSSInJSWithCSZ = async ()=>{
 // appDemoOptimizedLeFor()
 // appDemoFromHtmlTemplate()
 // appDemoCSSInJSWithCSZ()
+// appDemoEditRefValAndStupidShortcuts()
+// appDemoNoMoreLetAndAsFunc()
+// appDemoComponentFactory()
+// appDemoComponentPrivateVar()
